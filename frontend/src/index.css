@@ -1,97 +1,297 @@
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
 body {
+  margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  background: #f5f7fb;
-  color: #1f2937;
+  background: #f4f6f8;
+  color: #111827;
 }
 
 .app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .header {
   background: #111827;
   color: white;
   text-align: center;
-  padding: 40px 20px;
+  padding: 42px 20px;
 }
 
 .header h1 {
+  margin: 0;
   font-size: 42px;
-  margin-bottom: 10px;
 }
 
 .header p {
+  margin: 10px 0 0;
   font-size: 18px;
   color: #d1d5db;
 }
 
 .main {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
 }
 
 .welcome-card {
-  width: 100%;
-  max-width: 650px;
   background: white;
   border-radius: 16px;
-  padding: 40px;
-  text-align: center;
+  padding: 32px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-.welcome-card h2 {
-  font-size: 28px;
-  margin-bottom: 15px;
+.welcome-card > h2 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 30px;
 }
 
 .welcome-card > p {
+  text-align: center;
   color: #6b7280;
-  margin-bottom: 30px;
-  font-size: 16px;
+  margin-bottom: 28px;
 }
 
 .status-card {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
-  background: #f0fdf4;
+  gap: 14px;
+  padding: 18px;
   border: 1px solid #bbf7d0;
+  background: #f0fdf4;
   border-radius: 12px;
-  padding: 20px;
-  text-align: left;
+  margin-bottom: 32px;
 }
 
 .status-dot {
   width: 14px;
   height: 14px;
-  background: #22c55e;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .status-card h3 {
-  margin-bottom: 5px;
+  margin: 0 0 4px;
 }
 
 .status-card p {
+  margin: 0;
   color: #6b7280;
+}
+
+.expense-form-section {
+  padding-bottom: 32px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.expense-form-section h2,
+.expense-section h2 {
+  margin-top: 0;
+}
+
+.expense-form-section form {
+  display: grid;
+  gap: 16px;
+}
+
+.expense-form-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.expense-form-section input,
+.expense-form-section select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+}
+
+.expense-form-section input:focus,
+.expense-form-section select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.expense-form-section button {
+  border: none;
+  border-radius: 8px;
+  padding: 12px 18px;
+  background: #2563eb;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expense-form-section button:hover {
+  background: #1d4ed8;
+}
+
+.expense-section {
+  padding-top: 32px;
+}
+
+.expense-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.expense-section-header h2 {
+  margin: 0;
+}
+
+.expense-count {
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.expense-list {
+  display: grid;
+  gap: 14px;
+}
+
+.expense-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  background: white;
+}
+
+.expense-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.expense-card-main h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.expense-description {
+  margin: 6px 0 0;
+  color: #6b7280;
+}
+
+.expense-amount {
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.expense-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f0;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .footer {
   text-align: center;
-  padding: 20px;
+  padding: 30px 20px;
   color: #6b7280;
+}
+
+@media (max-width: 600px) {
+  .header h1 {
+    font-size: 32px;
+  }
+
+  .welcome-card {
+    padding: 22px;
+  }
+
+  .expense-card-main {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .expense-card-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.expense-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.edit-button {
+  border: none;
+  border-radius: 7px;
+  padding: 8px 16px;
+  background: #f3f4f6;
+  color: #1f2937;
   font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  background: #e5e7eb;
+}
+
+.delete-button {
+  border: none;
+  border-radius: 7px;
+  padding: 8px 16px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #fecaca;
+}
+
+.cancel-button {
+  border: 1px solid #d1d5db !important;
+  background: white !important;
+  color: #374151 !important;
+}
+
+.cancel-button:hover {
+  background: #f3f4f6 !important;
 }
