@@ -1,5 +1,40 @@
 import { useEffect, useState } from "react";
 
+const getErrorMessage = async (response) => {
+  try {
+    const errorData = await response.json();
+
+    if (errorData.message) {
+      return errorData.message;
+    }
+  } catch {
+    // Response does not contain JSON.
+  }
+
+  switch (response.status) {
+    case 400:
+      return "Invalid request. Please check your input.";
+
+    case 401:
+      return "You are not authorized to perform this action.";
+
+    case 403:
+      return "You do not have permission to perform this action.";
+
+    case 404:
+      return "The requested expense was not found.";
+
+    case 409:
+      return "This request conflicts with existing data.";
+
+    case 500:
+      return "Something went wrong on the server.";
+
+    default:
+      return "Something went wrong. Please try again.";
+  }
+};
+
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
   const [isConnected, setIsConnected] = useState(false);
@@ -15,6 +50,11 @@ function App() {
 
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [message, setMessage] = useState("");
+  const [errors, setErrors] = useState({});
+
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState(null);
 
   useEffect(() => {
     fetch("/api/health")
@@ -39,21 +79,34 @@ function App() {
     fetchExpenses();
   }, []);
 
-  const fetchExpenses = () => {
-    fetch("/api/expenses")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch expenses");
-        }
+  const fetchExpenses = async () => {
+    setIsLoadingExpenses(true);
+    setMessage("");
 
-        return response.json();
-      })
-      .then((data) => {
-        setExpenses(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching expenses:", error);
-      });
+    try {
+      const response = await fetch("/api/expenses");
+
+      if (!response.ok) {
+        const errorMessage = await getErrorMessage(response);
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      setExpenses(data);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+
+      if (error instanceof TypeError) {
+        setMessage(
+          "Unable to connect to the backend. Please make sure the server is running."
+        );
+      } else {
+        setMessage(error.message);
+      }
+    } finally {
+      setIsLoadingExpenses(false);
+    }
   };
 
   const handleChange = (event) => {
@@ -75,12 +128,51 @@ function App() {
     });
 
     setEditingExpenseId(null);
+    setErrors({});
   };
+
+const validateForm = () => {
+  const newErrors = {};
+
+  const amount = Number(formData.amount);
+
+  if (!formData.amount) {
+    newErrors.amount = "Amount is required.";
+  } else if (Number.isNaN(amount) || amount <= 0) {
+    newErrors.amount = "Amount must be greater than 0.";
+  }
+
+  if (!formData.category.trim()) {
+    newErrors.category = "Category is required.";
+  }
+
+  if (formData.description.length > 500) {
+    newErrors.description = "Description must not exceed 500 characters.";
+  }
+
+  if (!formData.expenseDate) {
+    newErrors.expenseDate = "Expense date is required.";
+  }
+
+  if (!formData.paymentMethod) {
+    newErrors.paymentMethod = "Payment method is required.";
+  }
+
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+};
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     setMessage("");
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
       const url = editingExpenseId
@@ -104,11 +196,8 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error(
-          editingExpenseId
-            ? "Failed to update expense"
-            : "Failed to create expense"
-        );
+        const errorMessage = await getErrorMessage(response);
+        throw new Error(errorMessage);
       }
 
       const savedExpense = await response.json();
@@ -134,11 +223,15 @@ function App() {
     } catch (error) {
       console.error("Error saving expense:", error);
 
-      setMessage(
-        editingExpenseId
-          ? "Failed to update expense."
-          : "Failed to add expense."
-      );
+      if (error instanceof TypeError) {
+        setMessage(
+          "Unable to connect to the backend. Please try again."
+        );
+      } else {
+        setMessage(error.message);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -154,7 +247,7 @@ function App() {
     });
 
     setMessage("");
-
+    setErrors({});
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -170,6 +263,7 @@ function App() {
       return;
     }
 
+    setDeletingExpenseId(id);
     setMessage("");
 
     try {
@@ -178,7 +272,8 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete expense");
+        const errorMessage = await getErrorMessage(response);
+        throw new Error(errorMessage);
       }
 
       setExpenses((previousExpenses) =>
@@ -192,7 +287,16 @@ function App() {
       setMessage("Expense deleted successfully!");
     } catch (error) {
       console.error("Error deleting expense:", error);
-      setMessage("Failed to delete expense.");
+
+      if (error instanceof TypeError) {
+        setMessage(
+          "Unable to connect to the backend. Please try again."
+        );
+      } else {
+        setMessage(error.message);
+      }
+    } finally {
+      setDeletingExpenseId(null);
     }
   };
 
@@ -262,6 +366,9 @@ function App() {
                   onChange={handleChange}
                   required
                 />
+{errors.amount && (
+  <p className="field-error">{errors.amount}</p>
+)}
               </div>
 
               <div>
@@ -276,6 +383,9 @@ function App() {
                   onChange={handleChange}
                   required
                 />
+{errors.category && (
+  <p className="field-error">{errors.category}</p>
+)}
               </div>
 
               <div>
@@ -289,6 +399,10 @@ function App() {
                   value={formData.description}
                   onChange={handleChange}
                 />
+
+{errors.expenseDate && (
+  <p className="field-error">{errors.expenseDate}</p>
+)}
               </div>
 
               <div>
@@ -302,6 +416,10 @@ function App() {
                   onChange={handleChange}
                   required
                 />
+
+{errors.expenseDate && (
+  <p className="field-error">{errors.expenseDate}</p>
+)}
               </div>
 
               <div>
@@ -320,10 +438,19 @@ function App() {
                   <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="OTHER">Other</option>
                 </select>
+{errors.paymentMethod && (
+  <p className="field-error">{errors.paymentMethod}</p>
+)}
               </div>
 
-              <button type="submit">
-                {editingExpenseId ? "Update Expense" : "Add Expense"}
+              <button type="submit" disabled={isSaving}>
+                {isSaving
+                  ? editingExpenseId
+                    ? "Updating..."
+                    : "Saving..."
+                  : editingExpenseId
+                    ? "Update Expense"
+                    : "Add Expense"}
               </button>
 
               {editingExpenseId && (
@@ -350,7 +477,12 @@ function App() {
               </span>
             </div>
 
-            {expenses.length === 0 ? (
+            {isLoadingExpenses ? (
+              <div className="empty-state">
+                <h3>Loading expenses...</h3>
+                <p>Please wait while your expenses are loaded.</p>
+              </div>
+            ) : expenses.length === 0 ? (
               <div className="empty-state">
                 <h3>No expenses yet</h3>
                 <p>Add your first expense using the form above.</p>
@@ -398,8 +530,11 @@ function App() {
                         type="button"
                         className="delete-button"
                         onClick={() => handleDelete(expense.id)}
+                        disabled={deletingExpenseId === expense.id}
                       >
-                        Delete
+                        {deletingExpenseId === expense.id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     </div>
                   </article>

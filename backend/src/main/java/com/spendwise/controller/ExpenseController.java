@@ -1,7 +1,9 @@
 package com.spendwise.controller;
 
-import com.spendwise.entity.Expense;
+import com.spendwise.dto.ExpenseRequest;
+import com.spendwise.dto.ExpenseResponse;
 import com.spendwise.service.ExpenseService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,35 +20,46 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Expense>> getAllExpenses() {
+    public ResponseEntity<List<ExpenseResponse>> getAllExpenses() {
         return ResponseEntity.ok(expenseService.getAllExpenses());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Expense> getExpenseById(@PathVariable Long id) {
-        return expenseService.getExpenseById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+   @GetMapping("/{id}")
+public ResponseEntity<ExpenseResponse> getExpenseById(
+        @PathVariable Long id) {
+
+    ExpenseResponse expense = expenseService.getExpenseById(id);
+
+    return ResponseEntity.ok(expense);
+}
 
     @PostMapping
-    public ResponseEntity<Expense> createExpense(@RequestBody Expense expense) {
-        Expense createdExpense = expenseService.createExpense(expense);
-        return ResponseEntity.ok(createdExpense);
+    public ResponseEntity<ExpenseResponse> createExpense(
+            @Valid @RequestBody ExpenseRequest request) {
+
+        ExpenseResponse createdExpense =
+                expenseService.createExpense(request);
+
+        return ResponseEntity.status(201).body(createdExpense);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Expense> updateExpense(
+    public ResponseEntity<ExpenseResponse> updateExpense(
             @PathVariable Long id,
-            @RequestBody Expense expenseDetails) {
+            @Valid @RequestBody ExpenseRequest request) {
 
-        Expense updatedExpense = expenseService.updateExpense(id, expenseDetails);
+        ExpenseResponse updatedExpense =
+                expenseService.updateExpense(id, request);
+
         return ResponseEntity.ok(updatedExpense);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteExpense(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteExpense(
+            @PathVariable Long id) {
+
         expenseService.deleteExpense(id);
+
         return ResponseEntity.noContent().build();
     }
 }
