@@ -1,24 +1,26 @@
 package com.spendwise.dto;
 
-import com.spendwise.entity.PaymentMethod;
+import com.spendwise.entity.BillingCycle;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public class ExpenseResponse {
+public class SubscriptionResponse {
 
     private Long id;
+    private String name;
     private BigDecimal amount;
+    private BillingCycle billingCycle;
+    private LocalDate startDate;
+    private LocalDate nextBillingDate;
     private Long categoryId;
     private String categoryName;
     private String description;
-    private LocalDate expenseDate;
-    private PaymentMethod paymentMethod;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public ExpenseResponse() {}
+    public SubscriptionResponse() {}
 
     public Long getId() {
         return id;
@@ -28,12 +30,44 @@ public class ExpenseResponse {
         this.id = id;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public BillingCycle getBillingCycle() {
+        return billingCycle;
+    }
+
+    public void setBillingCycle(BillingCycle billingCycle) {
+        this.billingCycle = billingCycle;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getNextBillingDate() {
+        return nextBillingDate;
+    }
+
+    public void setNextBillingDate(LocalDate nextBillingDate) {
+        this.nextBillingDate = nextBillingDate;
     }
 
     public Long getCategoryId() {
@@ -58,22 +92,6 @@ public class ExpenseResponse {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public LocalDate getExpenseDate() {
-        return expenseDate;
-    }
-
-    public void setExpenseDate(LocalDate expenseDate) {
-        this.expenseDate = expenseDate;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(PaymentMethod paymentMethod) {
-        this.paymentMethod = paymentMethod;
     }
 
     public LocalDateTime getCreatedAt() {

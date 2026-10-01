@@ -1,10 +1,8 @@
 package com.spendwise.dto;
 
 import com.spendwise.entity.PaymentMethod;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,11 +13,14 @@ public class ExpenseRequest {
     @Positive(message = "Amount must be greater than 0")
     private BigDecimal amount;
 
-    @NotBlank(message = "Category is required")
-    @Size(max = 50, message = "Category must not exceed 50 characters")
-    private String category;
+    @NotNull(message = "Category is required")
+    @Positive(message = "Category ID must be greater than 0")
+    private Long categoryId;
 
-    @Size(max = 500, message = "Description must not exceed 500 characters")
+    @jakarta.validation.constraints.Size(
+            max = 500,
+            message = "Description must not exceed 500 characters"
+    )
     private String description;
 
     @NotNull(message = "Expense date is required")
@@ -28,8 +29,7 @@ public class ExpenseRequest {
     @NotNull(message = "Payment method is required")
     private PaymentMethod paymentMethod;
 
-    public ExpenseRequest() {
-    }
+    public ExpenseRequest() {}
 
     public BigDecimal getAmount() {
         return amount;
@@ -39,12 +39,12 @@ public class ExpenseRequest {
         this.amount = amount;
     }
 
-    public String getCategory() {
-        return category;
+    public Long getCategoryId() {
+        return categoryId;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getDescription() {

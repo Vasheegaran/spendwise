@@ -7,15 +7,28 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "expenses")
-public class Expense {
+@Table(name = "subscriptions")
+public class Subscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
+    private String name;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private BillingCycle billingCycle;
+
+    @Column(nullable = false)
+    private LocalDate startDate;
+
+    @Column(nullable = false)
+    private LocalDate nextBillingDate;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", nullable = false)
@@ -23,13 +36,6 @@ public class Expense {
 
     @Column(length = 500)
     private String description;
-
-    @Column(nullable = false)
-    private LocalDate expenseDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private PaymentMethod paymentMethod;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -50,7 +56,7 @@ public class Expense {
         updatedAt = LocalDateTime.now();
     }
 
-    public Expense() {}
+    public Subscription() {}
 
     public Long getId() {
         return id;
@@ -60,12 +66,44 @@ public class Expense {
         this.id = id;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public BillingCycle getBillingCycle() {
+        return billingCycle;
+    }
+
+    public void setBillingCycle(BillingCycle billingCycle) {
+        this.billingCycle = billingCycle;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getNextBillingDate() {
+        return nextBillingDate;
+    }
+
+    public void setNextBillingDate(LocalDate nextBillingDate) {
+        this.nextBillingDate = nextBillingDate;
     }
 
     public Category getCategory() {
@@ -82,22 +120,6 @@ public class Expense {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public LocalDate getExpenseDate() {
-        return expenseDate;
-    }
-
-    public void setExpenseDate(LocalDate expenseDate) {
-        this.expenseDate = expenseDate;
-    }
-
-    public PaymentMethod getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(PaymentMethod paymentMethod) {
-        this.paymentMethod = paymentMethod;
     }
 
     public LocalDateTime getCreatedAt() {

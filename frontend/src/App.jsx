@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import SubscriptionSection from "./SubscriptionSection";
+import CategorySection from "./CategorySection";
 
 const getErrorMessage = async (response) => {
   try {
@@ -22,7 +24,7 @@ const getErrorMessage = async (response) => {
       return "You do not have permission to perform this action.";
 
     case 404:
-      return "The requested expense was not found.";
+      return "The requested resource was not found.";
 
     case 409:
       return "This request conflicts with existing data.";
@@ -38,11 +40,13 @@ const getErrorMessage = async (response) => {
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
   const [isConnected, setIsConnected] = useState(false);
+
   const [expenses, setExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     amount: "",
-    category: "",
+    categoryId: "",
     description: "",
     expenseDate: "",
     paymentMethod: "UPI",
@@ -53,6 +57,7 @@ function App() {
   const [errors, setErrors] = useState({});
 
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState(null);
 
@@ -77,6 +82,7 @@ function App() {
 
   useEffect(() => {
     fetchExpenses();
+    fetchCategories();
   }, []);
 
   const fetchExpenses = async () => {
@@ -109,6 +115,33 @@ function App() {
     }
   };
 
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+
+    try {
+      const response = await fetch("/api/categories");
+
+      if (!response.ok) {
+        const errorMessage = await getErrorMessage(response);
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      setCategories(data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+
+      setMessage(
+        error instanceof TypeError
+          ? "Unable to connect to the backend while loading categories."
+          : `Unable to load categories: ${error.message}`
+      );
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -121,7 +154,7 @@ function App() {
   const resetForm = () => {
     setFormData({
       amount: "",
-      category: "",
+      categoryId: "",
       description: "",
       expenseDate: "",
       paymentMethod: "UPI",
@@ -131,37 +164,38 @@ function App() {
     setErrors({});
   };
 
-const validateForm = () => {
-  const newErrors = {};
+  const validateForm = () => {
+    const newErrors = {};
 
-  const amount = Number(formData.amount);
+    const amount = Number(formData.amount);
 
-  if (!formData.amount) {
-    newErrors.amount = "Amount is required.";
-  } else if (Number.isNaN(amount) || amount <= 0) {
-    newErrors.amount = "Amount must be greater than 0.";
-  }
+    if (!formData.amount) {
+      newErrors.amount = "Amount is required.";
+    } else if (Number.isNaN(amount) || amount <= 0) {
+      newErrors.amount = "Amount must be greater than 0.";
+    }
 
-  if (!formData.category.trim()) {
-    newErrors.category = "Category is required.";
-  }
+    if (!formData.categoryId) {
+      newErrors.categoryId = "Category is required.";
+    }
 
-  if (formData.description.length > 500) {
-    newErrors.description = "Description must not exceed 500 characters.";
-  }
+    if (formData.description.length > 500) {
+      newErrors.description =
+        "Description must not exceed 500 characters.";
+    }
 
-  if (!formData.expenseDate) {
-    newErrors.expenseDate = "Expense date is required.";
-  }
+    if (!formData.expenseDate) {
+      newErrors.expenseDate = "Expense date is required.";
+    }
 
-  if (!formData.paymentMethod) {
-    newErrors.paymentMethod = "Payment method is required.";
-  }
+    if (!formData.paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required.";
+    }
 
-  setErrors(newErrors);
+    setErrors(newErrors);
 
-  return Object.keys(newErrors).length === 0;
-};
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -188,7 +222,7 @@ const validateForm = () => {
         },
         body: JSON.stringify({
           amount: Number(formData.amount),
-          category: formData.category,
+          categoryId: Number(formData.categoryId),
           description: formData.description,
           expenseDate: formData.expenseDate,
           paymentMethod: formData.paymentMethod,
@@ -240,7 +274,7 @@ const validateForm = () => {
 
     setFormData({
       amount: expense.amount,
-      category: expense.category,
+      categoryId: String(expense.categoryId),
       description: expense.description || "",
       expenseDate: expense.expenseDate,
       paymentMethod: expense.paymentMethod,
@@ -248,6 +282,7 @@ const validateForm = () => {
 
     setMessage("");
     setErrors({});
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -366,26 +401,46 @@ const validateForm = () => {
                   onChange={handleChange}
                   required
                 />
-{errors.amount && (
-  <p className="field-error">{errors.amount}</p>
-)}
+
+                {errors.amount && (
+                  <p className="field-error">{errors.amount}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="category">Category</label>
+                <label htmlFor="categoryId">Category</label>
 
-                <input
-                  id="category"
-                  name="category"
-                  type="text"
-                  placeholder="Example: Food"
-                  value={formData.category}
+                <select
+                  id="categoryId"
+                  name="categoryId"
+                  value={formData.categoryId}
                   onChange={handleChange}
+                  disabled={
+                    isLoadingCategories || categories.length === 0
+                  }
                   required
-                />
-{errors.category && (
-  <p className="field-error">{errors.category}</p>
-)}
+                >
+                  <option value="">
+                    {isLoadingCategories
+                      ? "Loading categories..."
+                      : categories.length === 0
+                        ? "No categories available"
+                        : "Select a category"}
+                  </option>
+
+                  {categories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+
+                {errors.categoryId && (
+                  <p className="field-error">{errors.categoryId}</p>
+                )}
               </div>
 
               <div>
@@ -400,9 +455,11 @@ const validateForm = () => {
                   onChange={handleChange}
                 />
 
-{errors.expenseDate && (
-  <p className="field-error">{errors.expenseDate}</p>
-)}
+                {errors.description && (
+                  <p className="field-error">
+                    {errors.description}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -417,13 +474,15 @@ const validateForm = () => {
                   required
                 />
 
-{errors.expenseDate && (
-  <p className="field-error">{errors.expenseDate}</p>
-)}
+                {errors.expenseDate && (
+                  <p className="field-error">{errors.expenseDate}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="paymentMethod">Payment Method</label>
+                <label htmlFor="paymentMethod">
+                  Payment Method
+                </label>
 
                 <select
                   id="paymentMethod"
@@ -435,15 +494,27 @@ const validateForm = () => {
                   <option value="UPI">UPI</option>
                   <option value="CREDIT_CARD">Credit Card</option>
                   <option value="DEBIT_CARD">Debit Card</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="BANK_TRANSFER">
+                    Bank Transfer
+                  </option>
                   <option value="OTHER">Other</option>
                 </select>
-{errors.paymentMethod && (
-  <p className="field-error">{errors.paymentMethod}</p>
-)}
+
+                {errors.paymentMethod && (
+                  <p className="field-error">
+                    {errors.paymentMethod}
+                  </p>
+                )}
               </div>
 
-              <button type="submit" disabled={isSaving}>
+              <button
+                type="submit"
+                disabled={
+                  isSaving ||
+                  isLoadingCategories ||
+                  categories.length === 0
+                }
+              >
                 {isSaving
                   ? editingExpenseId
                     ? "Updating..."
@@ -490,10 +561,13 @@ const validateForm = () => {
             ) : (
               <div className="expense-list">
                 {expenses.map((expense) => (
-                  <article className="expense-card" key={expense.id}>
+                  <article
+                    className="expense-card"
+                    key={expense.id}
+                  >
                     <div className="expense-card-main">
                       <div>
-                        <h3>{expense.category}</h3>
+                        <h3>{expense.categoryName}</h3>
 
                         {expense.description && (
                           <p className="expense-description">
@@ -530,7 +604,9 @@ const validateForm = () => {
                         type="button"
                         className="delete-button"
                         onClick={() => handleDelete(expense.id)}
-                        disabled={deletingExpenseId === expense.id}
+                        disabled={
+                          deletingExpenseId === expense.id
+                        }
                       >
                         {deletingExpenseId === expense.id
                           ? "Deleting..."
@@ -543,6 +619,10 @@ const validateForm = () => {
             )}
           </div>
         </section>
+
+        <SubscriptionSection />
+
+        <CategorySection />
       </main>
 
       <footer className="footer">

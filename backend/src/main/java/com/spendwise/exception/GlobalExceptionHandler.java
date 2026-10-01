@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -34,7 +35,9 @@ public class GlobalExceptionHandler {
         String message = exception.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .map(error ->
+                        error.getField() + ": " + error.getDefaultMessage()
+                )
                 .collect(Collectors.joining(", "));
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
@@ -43,7 +46,8 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now()
         );
 
-        return ResponseEntity.badRequest().body(errorResponse);
+        return ResponseEntity.badRequest()
+                .body(errorResponse);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -56,8 +60,37 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now()
         );
 
-        return ResponseEntity.badRequest().body(errorResponse);
+        return ResponseEntity.badRequest()
+                .body(errorResponse);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(
+            IllegalArgumentException exception) {
+
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
+@ExceptionHandler(HttpMessageNotReadableException.class)
+public ResponseEntity<ApiErrorResponse> handleMessageNotReadable(
+        HttpMessageNotReadableException exception) {
+
+    ApiErrorResponse errorResponse = new ApiErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Invalid request body. Please check the provided values.",
+            LocalDateTime.now()
+    );
+
+    return ResponseEntity.badRequest()
+            .body(errorResponse);
+}
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneralException(
