@@ -6,6 +6,13 @@ import com.spendwise.service.ExpenseService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.spendwise.entity.PaymentMethod;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -18,12 +25,32 @@ public class ExpenseController {
     public ExpenseController(ExpenseService expenseService) {
         this.expenseService = expenseService;
     }
+@GetMapping
+public ResponseEntity<Page<ExpenseResponse>> getAllExpenses(
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) Long categoryId,
+        @RequestParam(required = false) PaymentMethod paymentMethod,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate startDate,
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        LocalDate endDate,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
 
-    @GetMapping
-    public ResponseEntity<List<ExpenseResponse>> getAllExpenses() {
-        return ResponseEntity.ok(expenseService.getAllExpenses());
-    }
+    Page<ExpenseResponse> expenses =
+            expenseService.getAllExpenses(
+                    search,
+                    categoryId,
+                    paymentMethod,
+                    startDate,
+                    endDate,
+                    PageRequest.of(page, size)
+            );
 
+    return ResponseEntity.ok(expenses);
+}
    @GetMapping("/{id}")
 public ResponseEntity<ExpenseResponse> getExpenseById(
         @PathVariable Long id) {

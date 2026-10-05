@@ -182,3 +182,143 @@
     border-right-color: var(--border);
   }
 }
+
+.expense-search {
+  margin-bottom: 20px;
+}
+
+.expense-search label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.expense-search-input-wrapper {
+  position: relative;
+}
+
+.expense-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.expense-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px 11px 38px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+}
+
+.expense-search input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.expense-filter {
+  margin-bottom: 20px;
+}
+
+.expense-filter label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.expense-filter select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.expense-filter select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.expense-date-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.expense-date-filter label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.expense-date-filter input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #ffffff;
+}
+
+.expense-date-filter input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+@media (max-width: 600px) {
+  .expense-date-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.expense-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pagination-button {
+  min-width: 100px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  min-width: 100px;
+  text-align: center;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}

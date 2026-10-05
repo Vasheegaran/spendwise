@@ -96,6 +96,8 @@ public ResponseEntity<ApiErrorResponse> handleMessageNotReadable(
     public ResponseEntity<ApiErrorResponse> handleGeneralException(
             Exception exception) {
 
+                
+
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "An unexpected error occurred",

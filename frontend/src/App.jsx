@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import SubscriptionSection from "./SubscriptionSection";
 import CategorySection from "./CategorySection";
+import DashboardSection from "./DashboardSection";
+import ExpenseSearch from "./ExpenseSearch";
+import ExpenseCategoryFilter from "./ExpenseCategoryFilter";
+import ExpensePaymentFilter from "./ExpensePaymentFilter";
+import ExpenseDateFilters from "./ExpenseDateFilters";
+import ExpensePagination from "./ExpensePagination";
 
 const getErrorMessage = async (response) => {
   try {
@@ -43,6 +49,14 @@ function App() {
 
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+const [endDate, setEndDate] = useState("");
+
+const [currentPage, setCurrentPage] = useState(0);
+const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -57,6 +71,7 @@ function App() {
   const [errors, setErrors] = useState({});
 
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [expenseError, setExpenseError] = useState("");
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState(null);
@@ -80,17 +95,50 @@ function App() {
       });
   }, []);
 
-  useEffect(() => {
-    fetchExpenses();
-    fetchCategories();
-  }, []);
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(page - 1, 0));
+  };
 
-  const fetchExpenses = async () => {
+  const goToNextPage = () => {
+    setCurrentPage((page) =>
+      Math.min(page + 1, totalPages - 1)
+    );
+  };
+
+  const fetchExpenses = useCallback(async () => {
     setIsLoadingExpenses(true);
+    setExpenseError("");
     setMessage("");
 
     try {
-      const response = await fetch("/api/expenses");
+      const params = new URLSearchParams();
+
+      if (searchTerm.trim()) {
+        params.append("search", searchTerm.trim());
+      }
+
+      if (categoryFilter) {
+        params.append("categoryId", categoryFilter);
+      }
+
+      if (paymentFilter) {
+        params.append("paymentMethod", paymentFilter);
+      }
+
+      if (startDate) {
+        params.append("startDate", startDate);
+      }
+
+      if (endDate) {
+        params.append("endDate", endDate);
+      }
+
+      params.append("page", currentPage);
+      params.append("size", 10);
+
+      const response = await fetch(
+        `/api/expenses?${params.toString()}`
+      );
 
       if (!response.ok) {
         const errorMessage = await getErrorMessage(response);
@@ -99,10 +147,18 @@ function App() {
 
       const data = await response.json();
 
-      setExpenses(data);
+      setExpenses(data.content || []);
+      setCurrentPage(data.number || 0);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching expenses:", error);
-
+      if (error instanceof TypeError) {
+        setExpenseError(
+          "Unable to connect to the backend. Please make sure the server is running."
+        );
+      } else {
+        setExpenseError(error.message);
+      }
       if (error instanceof TypeError) {
         setMessage(
           "Unable to connect to the backend. Please make sure the server is running."
@@ -113,9 +169,16 @@ function App() {
     } finally {
       setIsLoadingExpenses(false);
     }
-  };
+  }, [
+    searchTerm,
+    categoryFilter,
+    paymentFilter,
+    startDate,
+    endDate,
+    currentPage,
+  ]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setIsLoadingCategories(true);
 
     try {
@@ -140,7 +203,19 @@ function App() {
     } finally {
       setIsLoadingCategories(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // The callback sets its loading state before awaiting the network request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    // The callback sets its loading state before awaiting the network request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchExpenses();
+  }, [fetchExpenses]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -350,6 +425,13 @@ function App() {
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   };
 
+  const hasExpenseFilters =
+    searchTerm.trim() ||
+    categoryFilter ||
+    paymentFilter ||
+    startDate ||
+    endDate;
+
   return (
     <div className="app">
       <header className="header">
@@ -358,6 +440,7 @@ function App() {
       </header>
 
       <main className="main">
+	<DashboardSection />
         <section className="welcome-card">
           <h2>Welcome to SpendWise</h2>
 
@@ -547,16 +630,77 @@ function App() {
                 {expenses.length === 1 ? "expense" : "expenses"}
               </span>
             </div>
+            <ExpenseSearch
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setCurrentPage(0);
+              }}
+            />
+            <ExpenseCategoryFilter
+              categories={categories}
+              value={categoryFilter}
+              onChange={(value) => {
+                setCategoryFilter(value);
+                setCurrentPage(0);
+              }}
+            />
+            <ExpensePaymentFilter
+              value={paymentFilter}
+              onChange={(value) => {
+                setPaymentFilter(value);
+                setCurrentPage(0);
+              }}
+            />
+            <ExpenseDateFilters
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={(value) => {
+                setStartDate(value);
+                setCurrentPage(0);
+              }}
+              onEndDateChange={(value) => {
+                setEndDate(value);
+                setCurrentPage(0);
+              }}
+            />
 
             {isLoadingExpenses ? (
               <div className="empty-state">
                 <h3>Loading expenses...</h3>
                 <p>Please wait while your expenses are loaded.</p>
               </div>
+            ) : expenseError ? (
+              <div className="error-state">
+                <h3>Unable to load expenses</h3>
+
+                <p>{expenseError}</p>
+
+                <button
+                  type="button"
+                  className="retry-button"
+                  onClick={fetchExpenses}
+                >
+                  Retry
+                </button>
+              </div>
             ) : expenses.length === 0 ? (
               <div className="empty-state">
-                <h3>No expenses yet</h3>
-                <p>Add your first expense using the form above.</p>
+                {hasExpenseFilters ? (
+                  <>
+                    <h3>No matching expenses</h3>
+                    <p>
+                      No expenses match your current filters.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3>No expenses yet</h3>
+                    <p>
+                      Add your first expense using the form above.
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="expense-list">
@@ -617,8 +761,19 @@ function App() {
                 ))}
               </div>
             )}
+
+{expenses.length > 0 && (
+  <ExpensePagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    onPrevious={goToPreviousPage}
+    onNext={goToNextPage}
+  />
+)}
           </div>
         </section>
+
+	
 
         <SubscriptionSection />
 

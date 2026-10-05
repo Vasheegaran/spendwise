@@ -8,6 +8,13 @@ import com.spendwise.exception.ResourceNotFoundException;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.ExpenseRepository;
 import org.springframework.stereotype.Service;
+import com.spendwise.repository.ExpenseSpecification;
+import com.spendwise.entity.PaymentMethod;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -25,12 +32,38 @@ public class ExpenseService {
         this.categoryRepository = categoryRepository;
     }
 
-    public List<ExpenseResponse> getAllExpenses() {
-        return expenseRepository.findAll()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
+   public List<ExpenseResponse> getAllExpenses() {
+
+    return getAllExpenses(
+            null,
+            null,
+            null,
+            null,
+            null,
+            Pageable.unpaged()
+    ).getContent();
+}
+
+   public Page<ExpenseResponse> getAllExpenses(
+        String search,
+        Long categoryId,
+        PaymentMethod paymentMethod,
+        LocalDate startDate,
+        LocalDate endDate,
+        Pageable pageable) {
+
+    Specification<Expense> specification =
+            Specification
+                    .where(ExpenseSpecification.hasSearch(search))
+                    .and(ExpenseSpecification.hasCategory(categoryId))
+                    .and(ExpenseSpecification.hasPaymentMethod(paymentMethod))
+                    .and(ExpenseSpecification.hasStartDate(startDate))
+                    .and(ExpenseSpecification.hasEndDate(endDate));
+
+    return expenseRepository
+            .findAll(specification, pageable)
+            .map(this::mapToResponse);
+}
 
     public ExpenseResponse getExpenseById(Long id) {
         Expense expense = findExpenseById(id);
