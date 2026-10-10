@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./auth";
 
 const getErrorMessage = async (response) => {
   try {
@@ -59,7 +60,7 @@ function SubscriptionSection() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/subscriptions");
+      const response = await authFetch("/api/subscriptions");
 
       if (!response.ok) {
         throw new Error(await getErrorMessage(response));
@@ -79,7 +80,7 @@ function SubscriptionSection() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("/api/categories");
+      const response = await authFetch("/api/categories");
 
       if (!response.ok) {
         throw new Error(await getErrorMessage(response));
@@ -175,7 +176,7 @@ function SubscriptionSection() {
 
       const method = editingSubscriptionId ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -261,7 +262,7 @@ function SubscriptionSection() {
     setMessage("");
 
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/subscriptions/${id}`,
         {
           method: "DELETE",

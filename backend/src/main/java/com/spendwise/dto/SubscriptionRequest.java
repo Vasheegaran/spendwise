@@ -17,6 +17,7 @@ public class SubscriptionRequest {
             message = "Subscription name must not exceed 100 characters"
     )
     private String name;
+    private Boolean active;
 
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be greater than 0")
@@ -75,6 +76,13 @@ public class SubscriptionRequest {
         this.startDate = startDate;
     }
 
+public Boolean getActive() {
+    return active;
+}
+
+public void setActive(Boolean active) {
+    this.active = active;
+}
     public LocalDate getNextBillingDate() {
         return nextBillingDate;
     }

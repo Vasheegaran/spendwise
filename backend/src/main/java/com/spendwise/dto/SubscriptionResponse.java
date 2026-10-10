@@ -19,6 +19,7 @@ public class SubscriptionResponse {
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+private boolean active;
 
     public SubscriptionResponse() {}
 
@@ -105,6 +106,14 @@ public class SubscriptionResponse {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+public boolean isActive() {
+    return active;
+}
+
+public void setActive(boolean active) {
+    this.active = active;
+}
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;

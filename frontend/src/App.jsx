@@ -2,11 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import SubscriptionSection from "./SubscriptionSection";
 import CategorySection from "./CategorySection";
 import DashboardSection from "./DashboardSection";
+import Login from "./Login";
+import Register from "./Register";
+import {
+  authFetch,
+  clearAuth,
+  getUser,
+  isAuthenticated,
+} from "./auth";
 import ExpenseSearch from "./ExpenseSearch";
 import ExpenseCategoryFilter from "./ExpenseCategoryFilter";
 import ExpensePaymentFilter from "./ExpensePaymentFilter";
 import ExpenseDateFilters from "./ExpenseDateFilters";
 import ExpensePagination from "./ExpensePagination";
+import { apiFetch } from "./auth";
 
 const getErrorMessage = async (response) => {
   try {
@@ -44,6 +53,16 @@ const getErrorMessage = async (response) => {
 };
 
 function App() {
+  const [authenticated, setAuthenticated] = useState(
+    isAuthenticated()
+  );
+
+  const [showRegister, setShowRegister] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState(
+    getUser()
+  );
+
   const [backendStatus, setBackendStatus] = useState("Checking...");
   const [isConnected, setIsConnected] = useState(false);
 
@@ -76,8 +95,35 @@ const [totalPages, setTotalPages] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState(null);
 
+  const handleLoginSuccess = (authData) => {
+    setAuthenticated(true);
+
+    setCurrentUser({
+      userId: authData.userId,
+      name: authData.name || "",
+      email: authData.email || "",
+    });
+
+    setShowRegister(false);
+  };
+
+  const handleRegisterSuccess = () => {
+    setShowRegister(false);
+  };
+
+  const handleUnauthorized = () => {
+    clearAuth();
+    setAuthenticated(false);
+    setCurrentUser(null);
+    setShowRegister(false);
+  };
+
+  const handleLogout = () => {
+    handleUnauthorized();
+  };
+
   useEffect(() => {
-    fetch("/api/health")
+    apiFetch("/api/health")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Backend request failed");
@@ -136,7 +182,7 @@ const [totalPages, setTotalPages] = useState(1);
       params.append("page", currentPage);
       params.append("size", 10);
 
-      const response = await fetch(
+      const response = await authFetch(
         `/api/expenses?${params.toString()}`
       );
 
@@ -182,7 +228,7 @@ const [totalPages, setTotalPages] = useState(1);
     setIsLoadingCategories(true);
 
     try {
-      const response = await fetch("/api/categories");
+      const response = await authFetch("/api/categories");
 
       if (!response.ok) {
         const errorMessage = await getErrorMessage(response);
@@ -206,16 +252,24 @@ const [totalPages, setTotalPages] = useState(1);
   }, []);
 
   useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
+
     // The callback sets its loading state before awaiting the network request.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCategories();
-  }, [fetchCategories]);
+  }, [authenticated, fetchCategories]);
 
   useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
+
     // The callback sets its loading state before awaiting the network request.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchExpenses();
-  }, [fetchExpenses]);
+  }, [authenticated, fetchExpenses]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -290,7 +344,7 @@ const [totalPages, setTotalPages] = useState(1);
 
       const method = editingExpenseId ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -377,7 +431,7 @@ const [totalPages, setTotalPages] = useState(1);
     setMessage("");
 
     try {
-      const response = await fetch(`/api/expenses/${id}`, {
+      const response = await authFetch(`/api/expenses/${id}`, {
         method: "DELETE",
       });
 
@@ -432,11 +486,46 @@ const [totalPages, setTotalPages] = useState(1);
     startDate ||
     endDate;
 
+  if (!authenticated) {
+    if (showRegister) {
+      return (
+        <Register
+          onRegisterSuccess={handleRegisterSuccess}
+          onShowLogin={() => setShowRegister(false)}
+        />
+      );
+    }
+
+    return (
+      <Login
+        onLoginSuccess={handleLoginSuccess}
+        onShowRegister={() => setShowRegister(true)}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <header className="header">
-        <h1>SpendWise</h1>
-        <p>Personal Expense & Subscription Tracker</p>
+        <div>
+          <h1>SpendWise</h1>
+          <p>Personal Expense & Subscription Tracker</p>
+        </div>
+
+        <div className="header-user">
+          <div className="header-user-info">
+            <strong>{currentUser?.name || "User"}</strong>
+            <span>{currentUser?.email || ""}</span>
+          </div>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="main">

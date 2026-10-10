@@ -18,13 +18,16 @@ function RecentExpenses({ expenses = [] }) {
     );
   };
 
-  const formatPaymentMethod = (paymentMethod) => {
-    return paymentMethod
-      .replaceAll("_", " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  };
+ const formatPaymentMethod = (paymentMethod) => {
+  if (!paymentMethod) {
+    return "Not specified";
+  }
 
+  return paymentMethod
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
   return (
     <div className="recent-expenses-list">
       {expenses.map((expense) => (

@@ -4,18 +4,22 @@ import com.spendwise.dto.ExpenseRequest;
 import com.spendwise.dto.ExpenseResponse;
 import com.spendwise.entity.Category;
 import com.spendwise.entity.Expense;
+import com.spendwise.entity.User;
 import com.spendwise.exception.ResourceNotFoundException;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.ExpenseRepository;
-import org.springframework.stereotype.Service;
 import com.spendwise.repository.ExpenseSpecification;
-import com.spendwise.entity.PaymentMethod;
-import org.springframework.data.jpa.domain.Specification;
+import com.spendwise.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import com.spendwise.entity.PaymentMethod;
 
 import java.time.LocalDate;
-
 import java.util.List;
 
 @Service
@@ -23,74 +27,111 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     public ExpenseService(
             ExpenseRepository expenseRepository,
-            CategoryRepository categoryRepository) {
-
+            CategoryRepository categoryRepository,
+            UserRepository userRepository
+    ) {
         this.expenseRepository = expenseRepository;
         this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
     }
 
-   public List<ExpenseResponse> getAllExpenses() {
+    public List<ExpenseResponse> getAllExpenses() {
 
-    return getAllExpenses(
-            null,
-            null,
-            null,
-            null,
-            null,
-            Pageable.unpaged()
-    ).getContent();
-}
+        return getAllExpenses(
+                null,
+                null,
+                null,
+                null,
+                null,
+                Pageable.unpaged()
+        ).getContent();
+    }
 
-   public Page<ExpenseResponse> getAllExpenses(
-        String search,
-        Long categoryId,
-        PaymentMethod paymentMethod,
-        LocalDate startDate,
-        LocalDate endDate,
-        Pageable pageable) {
+    public Page<ExpenseResponse> getAllExpenses(
+            String search,
+            Long categoryId,
+            PaymentMethod paymentMethod,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable
+    ) {
 
-    Specification<Expense> specification =
-            Specification
-                    .where(ExpenseSpecification.hasSearch(search))
-                    .and(ExpenseSpecification.hasCategory(categoryId))
-                    .and(ExpenseSpecification.hasPaymentMethod(paymentMethod))
-                    .and(ExpenseSpecification.hasStartDate(startDate))
-                    .and(ExpenseSpecification.hasEndDate(endDate));
+        Long userId = getCurrentUser().getId();
 
-    return expenseRepository
-            .findAll(specification, pageable)
-            .map(this::mapToResponse);
-}
+        Specification<Expense> specification =
+                Specification
+                        .where(ExpenseSpecification.hasSearch(search))
+                        .and(ExpenseSpecification.hasCategory(categoryId))
+                        .and(ExpenseSpecification.hasPaymentMethod(paymentMethod))
+                        .and(ExpenseSpecification.hasStartDate(startDate))
+                        .and(ExpenseSpecification.hasEndDate(endDate))
+                        .and((root, query, criteriaBuilder) ->
+                                criteriaBuilder.equal(
+                                        root.get("user").get("id"),
+                                        userId
+                                )
+                        );
+
+        return expenseRepository
+                .findAll(specification, pageable)
+                .map(this::mapToResponse);
+    }
 
     public ExpenseResponse getExpenseById(Long id) {
-        Expense expense = findExpenseById(id);
+
+        Long userId = getCurrentUser().getId();
+
+        Expense expense = expenseRepository
+                .findByIdAndUserId(id, userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Expense not found with id: " + id
+                        )
+                );
 
         return mapToResponse(expense);
     }
 
     public ExpenseResponse createExpense(ExpenseRequest request) {
-        Expense expense = mapToEntity(request);
 
-        Expense savedExpense = expenseRepository.save(expense);
+        User user = getCurrentUser();
+
+        Expense expense = mapToEntity(request);
+        expense.setUser(user);
+
+        Expense savedExpense =
+                expenseRepository.save(expense);
 
         return mapToResponse(savedExpense);
     }
 
     public ExpenseResponse updateExpense(
             Long id,
-            ExpenseRequest request) {
+            ExpenseRequest request
+    ) {
 
-        Expense expense = findExpenseById(id);
+        Long userId = getCurrentUser().getId();
+
+        Expense expense = expenseRepository
+                .findByIdAndUserId(id, userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Expense not found with id: " + id
+                        )
+                );
 
         expense.setAmount(request.getAmount());
         expense.setDescription(request.getDescription());
         expense.setExpenseDate(request.getExpenseDate());
         expense.setPaymentMethod(request.getPaymentMethod());
 
-        Category category = findCategoryById(request.getCategoryId());
+        Category category =
+                findCategoryById(request.getCategoryId());
+
         expense.setCategory(category);
 
         Expense updatedExpense =
@@ -100,30 +141,59 @@ public class ExpenseService {
     }
 
     public void deleteExpense(Long id) {
-        Expense expense = findExpenseById(id);
 
-        expenseRepository.delete(expense);
-    }
+        Long userId = getCurrentUser().getId();
 
-    private Expense findExpenseById(Long id) {
-        return expenseRepository.findById(id)
+        Expense expense = expenseRepository
+                .findByIdAndUserId(id, userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Expense not found with id: " + id
                         )
                 );
+
+        expenseRepository.delete(expense);
+    }
+
+    private User getCurrentUser() {
+
+        Object principal =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        String email;
+
+        if (principal instanceof UserDetails userDetails) {
+            email = userDetails.getUsername();
+        } else {
+            throw new IllegalStateException(
+                    "Authenticated user not found"
+            );
+        }
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Authenticated user not found"
+                        )
+                );
     }
 
     private Category findCategoryById(Long categoryId) {
+
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Category not found with id: " + categoryId
+                                "Category not found with id: "
+                                        + categoryId
                         )
                 );
     }
 
     private Expense mapToEntity(ExpenseRequest request) {
+
         Expense expense = new Expense();
 
         expense.setAmount(request.getAmount());
@@ -131,29 +201,54 @@ public class ExpenseService {
         expense.setExpenseDate(request.getExpenseDate());
         expense.setPaymentMethod(request.getPaymentMethod());
 
-        Category category = findCategoryById(request.getCategoryId());
+        Category category =
+                findCategoryById(request.getCategoryId());
+
         expense.setCategory(category);
 
         return expense;
     }
 
-    private ExpenseResponse mapToResponse(Expense expense) {
-    ExpenseResponse response = new ExpenseResponse();
+    private ExpenseResponse mapToResponse(
+            Expense expense
+    ) {
 
-    response.setId(expense.getId());
-    response.setAmount(expense.getAmount());
+        ExpenseResponse response =
+                new ExpenseResponse();
 
-    if (expense.getCategory() != null) {
-        response.setCategoryId(expense.getCategory().getId());
-        response.setCategoryName(expense.getCategory().getName());
+        response.setId(expense.getId());
+        response.setAmount(expense.getAmount());
+
+        if (expense.getCategory() != null) {
+            response.setCategoryId(
+                    expense.getCategory().getId()
+            );
+
+            response.setCategoryName(
+                    expense.getCategory().getName()
+            );
+        }
+
+        response.setDescription(
+                expense.getDescription()
+        );
+
+        response.setExpenseDate(
+                expense.getExpenseDate()
+        );
+
+        response.setPaymentMethod(
+                expense.getPaymentMethod()
+        );
+
+        response.setCreatedAt(
+                expense.getCreatedAt()
+        );
+
+        response.setUpdatedAt(
+                expense.getUpdatedAt()
+        );
+
+        return response;
     }
-
-    response.setDescription(expense.getDescription());
-    response.setExpenseDate(expense.getExpenseDate());
-    response.setPaymentMethod(expense.getPaymentMethod());
-    response.setCreatedAt(expense.getCreatedAt());
-    response.setUpdatedAt(expense.getUpdatedAt());
-
-    return response;
-}
 }

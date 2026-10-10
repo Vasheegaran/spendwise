@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./auth";
 import "./dashboard.css";
 import CategorySpending from "./CategorySpending";
 import RecentExpenses from "./RecentExpenses";
@@ -18,7 +19,7 @@ function DashboardSection() {
     setError("");
 
     try {
-      const response = await fetch("/api/dashboard");
+const response = await authFetch("/api/dashboard");
 
       if (!response.ok) {
         throw new Error(

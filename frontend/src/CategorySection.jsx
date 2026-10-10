@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./auth";
 
 const getErrorMessage = async (response) => {
   try {
@@ -55,7 +56,7 @@ function CategorySection() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/categories");
+      const response = await authFetch("/api/categories");
 
       if (!response.ok) {
         throw new Error(await getErrorMessage(response));
@@ -133,7 +134,7 @@ function CategorySection() {
 
       const method = editingCategoryId ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -209,7 +210,7 @@ function CategorySection() {
     setMessage("");
 
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/categories/${id}`,
         {
           method: "DELETE",

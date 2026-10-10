@@ -4,9 +4,13 @@ import com.spendwise.dto.SubscriptionRequest;
 import com.spendwise.dto.SubscriptionResponse;
 import com.spendwise.entity.Category;
 import com.spendwise.entity.Subscription;
+import com.spendwise.entity.User;
 import com.spendwise.exception.ResourceNotFoundException;
 import com.spendwise.repository.CategoryRepository;
 import com.spendwise.repository.SubscriptionRepository;
+import com.spendwise.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,24 +20,35 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     public SubscriptionService(
             SubscriptionRepository subscriptionRepository,
-            CategoryRepository categoryRepository) {
+            CategoryRepository categoryRepository,
+            UserRepository userRepository) {
 
         this.subscriptionRepository = subscriptionRepository;
         this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
     }
 
     public List<SubscriptionResponse> getAllSubscriptions() {
-        return subscriptionRepository.findAll()
+
+        Long userId = getCurrentUser().getId();
+
+        return subscriptionRepository
+                .findAllByUserId(userId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     public SubscriptionResponse getSubscriptionById(Long id) {
-        Subscription subscription = findSubscriptionById(id);
+
+        Long userId = getCurrentUser().getId();
+
+        Subscription subscription =
+                findSubscriptionById(id, userId);
 
         return mapToResponse(subscription);
     }
@@ -41,7 +56,18 @@ public class SubscriptionService {
     public SubscriptionResponse createSubscription(
             SubscriptionRequest request) {
 
-        Subscription subscription = mapToEntity(request);
+        User user = getCurrentUser();
+
+        Subscription subscription =
+                mapToEntity(request);
+
+        subscription.setUser(user);
+
+        if (request.getActive() != null) {
+            subscription.setActive(
+                    request.getActive()
+            );
+        }
 
         Subscription savedSubscription =
                 subscriptionRepository.save(subscription);
@@ -53,19 +79,45 @@ public class SubscriptionService {
             Long id,
             SubscriptionRequest request) {
 
-        Subscription subscription = findSubscriptionById(id);
+        Long userId = getCurrentUser().getId();
 
-        subscription.setName(request.getName().trim());
-        subscription.setAmount(request.getAmount());
-        subscription.setBillingCycle(request.getBillingCycle());
-        subscription.setStartDate(request.getStartDate());
+        Subscription subscription =
+                findSubscriptionById(id, userId);
+
+        subscription.setName(
+                request.getName().trim()
+        );
+
+        subscription.setAmount(
+                request.getAmount()
+        );
+
+        subscription.setBillingCycle(
+                request.getBillingCycle()
+        );
+
+        subscription.setStartDate(
+                request.getStartDate()
+        );
+
         subscription.setNextBillingDate(
                 request.getNextBillingDate()
         );
-        subscription.setDescription(request.getDescription());
+
+        subscription.setDescription(
+                request.getDescription()
+        );
+
+        if (request.getActive() != null) {
+            subscription.setActive(
+                    request.getActive()
+            );
+        }
 
         Category category =
-                findCategoryById(request.getCategoryId());
+                findCategoryById(
+                        request.getCategoryId()
+                );
 
         subscription.setCategory(category);
 
@@ -76,25 +128,38 @@ public class SubscriptionService {
     }
 
     public void deleteSubscription(Long id) {
-        Subscription subscription = findSubscriptionById(id);
+
+        Long userId = getCurrentUser().getId();
+
+        Subscription subscription =
+                findSubscriptionById(id, userId);
 
         subscriptionRepository.delete(subscription);
     }
 
-    private Subscription findSubscriptionById(Long id) {
-        return subscriptionRepository.findById(id)
+    private Subscription findSubscriptionById(
+            Long id,
+            Long userId) {
+
+        return subscriptionRepository
+                .findByIdAndUserId(id, userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Subscription not found with id: " + id
+                                "Subscription not found with id: "
+                                        + id
                         )
                 );
     }
 
-    private Category findCategoryById(Long categoryId) {
-        return categoryRepository.findById(categoryId)
+    private Category findCategoryById(
+            Long categoryId) {
+
+        return categoryRepository
+                .findById(categoryId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Category not found with id: " + categoryId
+                                "Category not found with id: "
+                                        + categoryId
                         )
                 );
     }
@@ -102,19 +167,37 @@ public class SubscriptionService {
     private Subscription mapToEntity(
             SubscriptionRequest request) {
 
-        Subscription subscription = new Subscription();
+        Subscription subscription =
+                new Subscription();
 
-        subscription.setName(request.getName().trim());
-        subscription.setAmount(request.getAmount());
-        subscription.setBillingCycle(request.getBillingCycle());
-        subscription.setStartDate(request.getStartDate());
+        subscription.setName(
+                request.getName().trim()
+        );
+
+        subscription.setAmount(
+                request.getAmount()
+        );
+
+        subscription.setBillingCycle(
+                request.getBillingCycle()
+        );
+
+        subscription.setStartDate(
+                request.getStartDate()
+        );
+
         subscription.setNextBillingDate(
                 request.getNextBillingDate()
         );
-        subscription.setDescription(request.getDescription());
+
+        subscription.setDescription(
+                request.getDescription()
+        );
 
         Category category =
-                findCategoryById(request.getCategoryId());
+                findCategoryById(
+                        request.getCategoryId()
+                );
 
         subscription.setCategory(category);
 
@@ -127,18 +210,32 @@ public class SubscriptionService {
         SubscriptionResponse response =
                 new SubscriptionResponse();
 
-        response.setId(subscription.getId());
-        response.setName(subscription.getName());
-        response.setAmount(subscription.getAmount());
+        response.setId(
+                subscription.getId()
+        );
+
+        response.setName(
+                subscription.getName()
+        );
+
+        response.setAmount(
+                subscription.getAmount()
+        );
+
         response.setBillingCycle(
                 subscription.getBillingCycle()
         );
-        response.setStartDate(subscription.getStartDate());
+
+        response.setStartDate(
+                subscription.getStartDate()
+        );
+
         response.setNextBillingDate(
                 subscription.getNextBillingDate()
         );
 
         if (subscription.getCategory() != null) {
+
             response.setCategoryId(
                     subscription.getCategory().getId()
             );
@@ -151,13 +248,45 @@ public class SubscriptionService {
         response.setDescription(
                 subscription.getDescription()
         );
+
+        response.setActive(
+                subscription.isActive()
+        );
+
         response.setCreatedAt(
                 subscription.getCreatedAt()
         );
+
         response.setUpdatedAt(
                 subscription.getUpdatedAt()
         );
 
         return response;
+    }
+
+    private User getCurrentUser() {
+
+        Object principal =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        if (!(principal instanceof UserDetails userDetails)) {
+
+            throw new IllegalStateException(
+                    "Authenticated user not found"
+            );
+        }
+
+        return userRepository
+                .findByEmail(
+                        userDetails.getUsername()
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Authenticated user not found"
+                        )
+                );
     }
 }

@@ -4,9 +4,12 @@ import com.spendwise.dto.CategorySpendingResponse;
 import com.spendwise.dto.DashboardSummaryResponse;
 import com.spendwise.dto.RecentExpenseResponse;
 import com.spendwise.entity.Expense;
-import com.spendwise.entity.Subscription;
+import com.spendwise.entity.User;
 import com.spendwise.repository.ExpenseRepository;
 import com.spendwise.repository.SubscriptionRepository;
+import com.spendwise.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,52 +23,69 @@ public class DashboardService {
 
     private final ExpenseRepository expenseRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
 
     public DashboardService(
             ExpenseRepository expenseRepository,
-            SubscriptionRepository subscriptionRepository) {
-
+            SubscriptionRepository subscriptionRepository,
+            UserRepository userRepository
+    ) {
         this.expenseRepository = expenseRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.userRepository = userRepository;
     }
 
     public DashboardSummaryResponse getDashboardSummary() {
+
+        User currentUser = getCurrentUser();
+        Long userId = currentUser.getId();
 
         LocalDate today = LocalDate.now();
 
         YearMonth currentMonth = YearMonth.from(today);
 
-        LocalDate monthStart = currentMonth.atDay(1);
-        LocalDate monthEnd = currentMonth.atEndOfMonth();
+        LocalDate monthStart =
+                currentMonth.atDay(1);
+
+        LocalDate monthEnd =
+                currentMonth.atEndOfMonth();
 
         BigDecimal totalExpenses =
-                expenseRepository.getTotalExpenses();
+                expenseRepository.getTotalExpenses(userId);
 
         BigDecimal currentMonthExpenses =
                 expenseRepository.getExpensesBetween(
+                        userId,
                         monthStart,
                         monthEnd
                 );
 
         BigDecimal todayExpenses =
                 expenseRepository.getExpensesBetween(
+                        userId,
                         today,
                         today
                 );
 
         long activeSubscriptions =
-                subscriptionRepository.count();
+        subscriptionRepository
+                .countByUserIdAndActiveTrue(userId);
 
         BigDecimal estimatedMonthlySubscriptionCost =
                 calculateMonthlySubscriptionCost();
 
         List<CategorySpendingResponse> categorySpending =
-                expenseRepository.getCategorySpending();
+                expenseRepository.getCategorySpending(userId);
+
+        List<Expense> recentExpenseEntities =
+                expenseRepository
+                        .findTop5ByUserIdOrderByExpenseDateDescIdDesc(
+                                userId
+                        );
 
         List<RecentExpenseResponse> recentExpenses =
-                expenseRepository.findTop5ByOrderByExpenseDateDescIdDesc()
-                        .stream()
-                        .map(this::mapRecentExpense)
+                recentExpenseEntities.stream()
+                        .map(this::mapToRecentExpense)
                         .toList();
 
         return new DashboardSummaryResponse(
@@ -81,58 +101,87 @@ public class DashboardService {
 
     private BigDecimal calculateMonthlySubscriptionCost() {
 
-        List<Subscription> subscriptions =
-                subscriptionRepository.findAll();
+       return subscriptionRepository
+        .findByUserIdAndActiveTrue(
+                getCurrentUser().getId()
+        )
+        .stream()
+                .map(subscription -> {
 
-        BigDecimal monthlyCost = BigDecimal.ZERO;
+                    BigDecimal amount =
+                            subscription.getAmount();
 
-        for (Subscription subscription : subscriptions) {
+                    return switch (
+                            subscription.getBillingCycle()
+                    ) {
+                        case WEEKLY ->
+                                amount.multiply(
+                                        BigDecimal.valueOf(52)
+                                ).divide(
+                                        BigDecimal.valueOf(12),
+                                        2,
+                                        RoundingMode.HALF_UP
+                                );
 
-            BigDecimal amount = subscription.getAmount();
+                        case MONTHLY ->
+                                amount;
 
-            switch (subscription.getBillingCycle()) {
-
-                case WEEKLY:
-                    monthlyCost = monthlyCost.add(
-                            amount.multiply(BigDecimal.valueOf(52))
-                                    .divide(
-                                            BigDecimal.valueOf(12),
-                                            2,
-                                            RoundingMode.HALF_UP
-                                    )
-                    );
-                    break;
-
-                case MONTHLY:
-                    monthlyCost = monthlyCost.add(amount);
-                    break;
-
-                case YEARLY:
-                    monthlyCost = monthlyCost.add(
-                            amount.divide(
-                                    BigDecimal.valueOf(12),
-                                    2,
-                                    RoundingMode.HALF_UP
-                            )
-                    );
-                    break;
-            }
-        }
-
-        return monthlyCost.setScale(2, RoundingMode.HALF_UP);
+                        case YEARLY ->
+                                amount.divide(
+                                        BigDecimal.valueOf(12),
+                                        2,
+                                        RoundingMode.HALF_UP
+                                );
+                    };
+                })
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
     }
 
-    private RecentExpenseResponse mapRecentExpense(
-            Expense expense) {
+    private RecentExpenseResponse mapToRecentExpense(
+            Expense expense
+    ) {
 
-        return new RecentExpenseResponse(
-                expense.getId(),
-                expense.getAmount(),
-                expense.getCategory().getId(),
-                expense.getCategory().getName(),
-                expense.getDescription(),
-                expense.getExpenseDate(),
-                expense.getPaymentMethod()
-        );
+        RecentExpenseResponse response =
+                new RecentExpenseResponse();
+
+        response.setId(expense.getId());
+        response.setDescription(expense.getDescription());
+        response.setAmount(expense.getAmount());
+        response.setExpenseDate(expense.getExpenseDate());
+
+        if (expense.getCategory() != null) {
+            response.setCategoryName(
+                    expense.getCategory().getName()
+            );
+        }
+
+        return response;
+    }
+
+    private User getCurrentUser() {
+
+        Object principal =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        if (!(principal instanceof UserDetails userDetails)) {
+            throw new IllegalStateException(
+                    "Authenticated user not found"
+            );
+        }
+
+        return userRepository.findByEmail(
+                        userDetails.getUsername()
+                )
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Authenticated user not found"
+                        )
+                );
     }
 }
