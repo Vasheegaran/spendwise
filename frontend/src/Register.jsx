@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "./auth";
 
 function Register({ onRegisterSuccess, onShowLogin }) {
   const [formData, setFormData] = useState({
@@ -73,7 +74,7 @@ function Register({ onRegisterSuccess, onShowLogin }) {
     setIsRegistering(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

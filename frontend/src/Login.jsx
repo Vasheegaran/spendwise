@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { saveAuth } from "./auth";
+import { saveAuth, apiFetch } from "./auth";
 
 function Login({ onLoginSuccess, onShowRegister }) {
   const [formData, setFormData] = useState({
@@ -32,7 +32,7 @@ function Login({ onLoginSuccess, onShowRegister }) {
     setIsLoggingIn(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
